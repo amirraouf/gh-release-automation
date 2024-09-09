@@ -17,9 +17,9 @@ jobs:
   release:
     name: Bump Version and Create Release
     runs-on: ubuntu-latest
-      strategy:
-        matrix:
-          python-version: [ "3.9" ]
+    strategy:
+      matrix:
+        python-version: [ "3.9" ]
 
     steps:
       - name: Checkout repository
