@@ -1,0 +1,102 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Type of release (major, minor, patch)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+
+jobs:
+  release:
+    name: Bump Version and Create Release
+    runs-on: ubuntu-latest
+      strategy:
+        matrix:
+          python-version: [ "3.9" ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install towncrier twisted
+
+      - name: Get the latest release tag
+        id: get_latest
+        run: |
+          latest_tag=$(git describe --tags --abbrev=0)
+          echo "Latest tag: $latest_tag"
+          echo "::set-output name=LATEST_TAG::$latest_tag"
+
+      - name: Determine new version based on input
+        id: new_version
+        run: |
+          latest_tag=${{ steps.get_latest.outputs.LATEST_TAG }}
+          echo "Latest tag: $latest_tag"
+
+          # Strip 'v' prefix from tag, if exists
+          latest_version="${latest_tag#v}"
+
+          # Split into major, minor, and patch
+          IFS='.' read -r major minor patch <<< "$latest_version"
+
+          # Determine the release type from the input
+          release_type="${{ github.event.inputs.release_type }}"
+          echo "Release type: $release_type"
+
+          # Bump version based on the input (major, minor, or patch)
+          if [ "$release_type" = "major" ]; then
+            major=$((major + 1))
+            minor=0
+            patch=0
+          elif [ "$release_type" = "minor" ]; then
+            minor=$((minor + 1))
+            patch=0
+          else
+            patch=$((patch + 1))
+          fi
+
+          new_version="$major.$minor.$patch"
+          echo "New version: $new_version"
+          echo "::set-output name=NEW_VERSION::$new_version"
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: v${{ steps.new_version.outputs.NEW_VERSION }}
+          release_name: v${{ steps.new_version.outputs.NEW_VERSION }}
+          body: "Release version v${{ steps.new_version.outputs.NEW_VERSION }}"
+          draft: false
+          prerelease: false
+
+      - name: Push new tag to repository
+        run: |
+          git config user.name "Engineering Team"
+          git config user.email "engineering@angiongroup.com"
+
+          git tag v${{ steps.new_version.outputs.NEW_VERSION }}
+          git push origin v${{ steps.new_version.outputs.NEW_VERSION }}
+
+      - name: Update Release Notes
+        id: update-release-notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        run: |
+          python generate_release_notes.py "${{ steps.new_version.outputs.NEW_VERSION }}" "${{ steps.get_latest.outputs.LATEST_TAG }}"
