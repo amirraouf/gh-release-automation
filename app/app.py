@@ -1,2 +1,2 @@
 if __name__ == "__main__":
-    print("hello world from feature 1")
+    print("hello world from feature 2")
