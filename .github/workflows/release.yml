@@ -102,4 +102,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         run: |
-          python generate_release_notes.py "${{ steps.new_version.outputs.NEW_VERSION }}" "${{ steps.get_latest.outputs.LATEST_TAG }}"
+          python generate_release_notes.py "v${{ steps.new_version.outputs.NEW_VERSION }}" "${{ steps.get_latest.outputs.LATEST_TAG }}"
