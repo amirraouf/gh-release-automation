@@ -19,7 +19,7 @@ The target defaults to `main` but can be set to a different commit or branch:
 The previous tag defaults to the last tag, but can be set to a different tag to view
 release notes for a different release. In this case, the target must be provided too.
 
-    generate-release-notes.py "2.3.3" "main" "2.3.2"
+    generate-release-notes.py "v2.3.3" "v2.3.2"
 """
 import os
 import re
@@ -166,6 +166,7 @@ def extract_changelog(pr_body):
     # Regular expressions to match the sections and their bullet points
     section_regex = re.compile(r"### (\w+)")
     bullet_point_regex = re.compile(r"- (.+)")
+    stop_line_regex = re.compile(r"## Screenshots.+")
 
     # Splitting the PR body by lines
     lines = pr_body.splitlines()
@@ -175,6 +176,9 @@ def extract_changelog(pr_body):
     for line in lines:
         section_match = section_regex.match(line)
         bullet_point_match = bullet_point_regex.match(line)
+        stop_line_match = stop_line_regex.match(line)
+        if stop_line_match:
+            break
 
         if section_match:
             current_section = section_match.group(1)
@@ -191,17 +195,19 @@ def extract_changelog(pr_body):
 def get_merged_prs(since, github_token):
     merged_prs = []
     page = 1
-    pulls_url = f'https://api.github.com/repos/{REPO_ORG}/{REPO_NAME}/pulls?state=closed&base=master&per_page=100'
+    pulls_url = f'https://api.github.com/repos/{REPO_ORG}/{REPO_NAME}/pulls?state=closed&base=main&per_page=100'
 
     while True:
         response = requests.get(f'{pulls_url}&page={page}', headers={'Authorization': f'token {github_token}'})
         prs = response.json()
-
+        print("response")
+        print(prs)
         if not prs:
             break
 
         for pr in prs:
             merged_at = datetime.strptime(pr['merged_at'], '%Y-%m-%dT%H:%M:%SZ') if pr['merged_at'] else None
+            since = since.replace(tzinfo=None)
             if merged_at and merged_at > since:
                 merged_prs.append(
                     {
@@ -213,7 +219,7 @@ def get_merged_prs(since, github_token):
                 )
 
         page += 1
-
+    print(merged_prs)
     return merged_prs
 
 
