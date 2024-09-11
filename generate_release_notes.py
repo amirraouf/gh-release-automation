@@ -104,8 +104,9 @@ def generate_release_body(since):
     release_body = ""
     for pr in merged_prs:
         print(f"### Ticket\n{pr['ticket_no']}")
+        release_body += f"## {pr['ticket_no']} - {pr['title']}\n"
+        
         for section, bullet_points in pr['release_notes'].items():
-            release_body += f"## {pr['ticket_no']} - {pr['title']}\n"
             if bullet_points:
                 print(f"### {section}")
                 release_body += f"### {section}\n"
